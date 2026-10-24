@@ -63,85 +63,91 @@ func makeBar(count int, total int, color string) string {
 	empty := width - filled
 	return color + strings.Repeat("█", filled) + Dim + strings.Repeat("█", empty) + Reset
 }
+func printProgress(current, total int) {
+	const width = 40
+	filled := (current * width) / total
+	empty := width - filled
+	pct := (float64(current) / float64(total)) * 100
+
+	bar := Green + strings.Repeat("█", filled) + Dim + strings.Repeat("█", empty) + Reset
+	fmt.Printf("\r %s⚡ Exécution en cours...%s %s %s%6.1f%%%s %s(%d/%d)%s",
+		Bold+Blue, Reset, bar, Bold+White, pct, Reset, Gray, current, total, Reset)
+}
 
 func printDashboard(cfg Config, totalDur time.Duration, rps float64, minLat, avgLat, maxLat time.Duration, statusCounts map[int]int, errCount int) {
-	fmt.Println()
+	
+	fmt.Printf("\r%-100s\r\n", "")
+	
+	fmt.Printf(" %s┌────────────────────────────────────────────┐%s\n", Blue, Reset)
+	fmt.Printf(" %s│%s %s%-42s%s %s│%s\n", Blue, Reset, Bold+White, "GOSURGE v1.0 - Testeur de Charge HTTP en Go", Reset, Blue, Reset)
+	fmt.Printf(" %s└────────────────────────────────────────────┘%s\n\n", Blue, Reset)
 
-	// 1. BANNIÈRE TITRE
-	fmt.Printf(" %s┌──────────────────────────────────────────┐%s\n", Blue, Reset)
-	fmt.Printf(" %s│%s %sGOSURGE v1.0 – Testeur de Charge HTTP en Go%s %s│%s\n", Blue, Reset, Bold+White, Reset, Blue, Reset)
-	fmt.Printf(" %s└──────────────────────────────────────────┘%s\n\n", Blue, Reset)
-
-	// 2. CADRE DE CONFIGURATION (4 COLONNES)
 	goroutinesStr := fmt.Sprintf("%d goroutines", cfg.Concurrency)
+	timeoutStr := cfg.Timeout.String()
+
 	fmt.Printf(" %s╭──────────────────────────────────────────────────────────────────────────────────────╮%s\n", Gray, Reset)
-	fmt.Printf(" %s│%s  %-24s %-18s %-20s %-18s %s│%s\n",
-		Gray, Reset, Gray+"CIBLE URL"+Reset, Gray+"REQUÊTES (-N)"+Reset, Gray+"WORKERS (-C)"+Reset, Gray+"TIMEOUT (-T)"+Reset, Gray, Reset)
-	fmt.Printf(" %s│%s  %s%-24s%s %s%-18d%s %s%-20s%s %s%-18v%s %s│%s\n",
+	fmt.Printf(" %s│%s  %s%-28s %-18s %-20s %-14s%s %s│%s\n",
+		Gray, Reset, Gray, "CIBLE URL", "REQUÊTES (-N)", "WORKERS (-C)", "TIMEOUT (-T)", Reset, Gray, Reset)
+	fmt.Printf(" %s│%s  %s%-28s%s %s%-18d%s %s%-20s%s %s%-14s%s %s│%s\n",
 		Gray, Reset,
 		Bold+White, cfg.URL, Reset,
 		Bold+Blue, cfg.TotalRequests, Reset,
 		Bold+Blue, goroutinesStr, Reset,
-		Bold+Blue, cfg.Timeout, Reset,
+		Bold+Blue, timeoutStr, Reset,
 		Gray, Reset)
 	fmt.Printf(" %s╰──────────────────────────────────────────────────────────────────────────────────────╯%s\n\n", Gray, Reset)
 
-	// Formatage des valeurs pour les 3 boîtes côte à côte
-	durStr := fmt.Sprintf("%.2f s", totalDur.Seconds())
+	var durStr string
+	if totalDur < time.Second {
+		durStr = fmt.Sprintf("%.1f ms", float64(totalDur.Microseconds())/1000.0)
+	} else {
+		durStr = fmt.Sprintf("%.2f s", totalDur.Seconds())
+	}
+
 	rpsStr := fmt.Sprintf("%.2f", rps)
 	avgStr := fmt.Sprintf("%.1f ms", float64(avgLat.Microseconds())/1000.0)
-	minMaxStr := fmt.Sprintf("Min %.1fms │ Max %.1fms",
+	minMaxStr := fmt.Sprintf("Min %.1fms | Max %.1fms",
 		float64(minLat.Microseconds())/1000.0,
 		float64(maxLat.Microseconds())/1000.0)
 
-	// 3. LES 3 CARTES CÔTÉ À CÔTE (Temps Total | Débit RPS | Latence Moyenne)
-	// Ligne du haut des 3 boîtes
 	fmt.Printf(" %s╭──────────────────────────╮%s  %s╭──────────────────────────╮%s  %s╭──────────────────────────╮%s\n",
 		GreenB, Reset, GreenB, Reset, Gray, Reset)
 
-	// Ligne 1 : Titres
 	fmt.Printf(" %s│%s %s%-24s%s %s│%s  %s│%s %s%-24s%s %s│%s  %s│%s %s%-24s%s %s│%s\n",
 		GreenB, Reset, Gray, "Temps Total", Reset, GreenB, Reset,
 		GreenB, Reset, Gray, "Débit RPS", Reset, GreenB, Reset,
 		Gray, Reset, Gray, "Latence Moyenne", Reset, Gray, Reset)
 
-	// Ligne 2 : Valeurs géantes en couleur
 	fmt.Printf(" %s│%s %s%-24s%s %s│%s  %s│%s %s%-24s%s %s│%s  %s│%s %s%-24s%s %s│%s\n",
 		GreenB, Reset, Bold+Green, durStr, Reset, GreenB, Reset,
 		GreenB, Reset, Bold+Blue, rpsStr, Reset, GreenB, Reset,
 		Gray, Reset, Bold+Orange, avgStr, Reset, Gray, Reset)
 
-	// Ligne 3 : Sous-titres
 	fmt.Printf(" %s│%s %s%-24s%s %s│%s  %s│%s %s%-24s%s %s│%s  %s│%s %s%-24s%s %s│%s\n",
 		GreenB, Reset, Gray, "Durée d'exécution", Reset, GreenB, Reset,
 		GreenB, Reset, Gray, "req / seconde", Reset, GreenB, Reset,
 		Gray, Reset, Gray, minMaxStr, Reset, Gray, Reset)
 
-	// Ligne du bas des 3 boîtes
 	fmt.Printf(" %s╰──────────────────────────╯%s  %s╰──────────────────────────╯%s  %s╰──────────────────────────╯%s\n\n",
 		GreenB, Reset, GreenB, Reset, Gray, Reset)
 
-	// 4. RÉPARTITION DES RÉPONSES HTTP
+
 	fmt.Printf(" %sRÉPARTITION DES RÉPONSES HTTP%s\n\n", Gray, Reset)
 
-	// Affichage 200 OK
 	c200 := statusCounts[200]
 	pct200 := (float64(c200) / float64(cfg.TotalRequests)) * 100
-	fmt.Printf(" %s%-11s%s %s  %s%5d (%.1f%%)%s\n\n",
+	fmt.Printf(" %s%-11s%s %s  %s%5d (%5.1f%%)%s\n\n",
 		Green, "[200 OK]", Reset, makeBar(c200, cfg.TotalRequests, Green), Bold+White, c200, pct200, Reset)
 
-	// Affichage des autres codes (ex: 500, 404...)
 	c500 := statusCounts[500]
 	pct500 := (float64(c500) / float64(cfg.TotalRequests)) * 100
-	fmt.Printf(" %s%-11s%s %s  %s%5d (%.1f%%)%s\n\n",
+	fmt.Printf(" %s%-11s%s %s  %s%5d (%5.1f%%)%s\n\n",
 		Orange, "[500 Err]", Reset, makeBar(c500, cfg.TotalRequests, Orange), Bold+White, c500, pct500, Reset)
 
-	// Affichage des Timeouts / Erreurs réseau
 	pctErr := (float64(errCount) / float64(cfg.TotalRequests)) * 100
-	fmt.Printf(" %s%-11s%s %s  %s%5d (%.1f%%)%s\n\n",
+	fmt.Printf(" %s%-11s%s %s  %s%5d (%5.1f%%)%s\n\n",
 		Red, "[Timeout]", Reset, makeBar(errCount, cfg.TotalRequests, Red), Bold+White, errCount, pctErr, Reset)
 }
-
 func main() {
 
 	var cfg Config
@@ -181,12 +187,11 @@ func main() {
 			}
 
 			close(jobs)
-			wg.Wait()
-			close(results)
-
-			totalTestDuration := time.Since(startTest)
-
-			rps := float64(cfg.TotalRequests) / totalTestDuration.Seconds()
+			
+			go func() {
+				wg.Wait()
+				close(results)
+			}()
 
 			statusCounts := make(map[int]int)
 
@@ -195,8 +200,11 @@ func main() {
 			var minLatency time.Duration
 			var maxLatency time.Duration
 			var sumLatency time.Duration
-
+			
+			completed := 0
 			for res := range results {
+				completed++
+				printProgress(completed, cfg.TotalRequests)
 				sumLatency += res.Duration
 				if res.Duration > maxLatency {
 					maxLatency = res.Duration
@@ -209,6 +217,9 @@ func main() {
 				}
 				statusCounts[res.StatusCode]++
 			}
+			
+			totalTestDuration := time.Since(startTest)
+			rps := float64(cfg.TotalRequests) / totalTestDuration.Seconds()
 			avgLatency := sumLatency / time.Duration(cfg.TotalRequests)
 
 			printDashboard(cfg, totalTestDuration, rps, minLatency, avgLatency, maxLatency, statusCounts, errorCount)

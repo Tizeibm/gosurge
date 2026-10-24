@@ -155,7 +155,7 @@ func main() {
 
 	rootCmd := &cobra.Command{
 		Use:   "gosurge",
-		Short: "Tool for testing HTTP requests",
+		Short: "Tool for load testing HTTP/HTTPS requests",
 		PreRunE: func(cmd *cobra.Command, args []string) error {
 			if cfg.TotalRequests <= 0 {
 				return fmt.Errorf("total requests must be greater than zero")
